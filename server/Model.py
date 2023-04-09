@@ -17,7 +17,6 @@ import keras.optimizers
 from keras.models import Model
 from numba import cuda
 from concurrent.futures import ThreadPoolExecutor
-import cupy as cp
 import tensorflow.keras.optimizers
 import tensorflow as tf
 np.set_printoptions(threshold=sys.maxsize) 
@@ -54,7 +53,7 @@ def MFCC_Preprocess(audio):
         while end_idx <= len(data):
             # Extract segment of audio data
             segment = data[start_idx:end_idx]
-            segment = cp.array(segment)
+            segment = np.array(segment)
             futures.append(executor.submit(feature_extraction_kernel,segment,window_samples,fs,n_mels,n_ceps))
             start_idx += step_samples
             end_idx += step_samples
@@ -62,42 +61,43 @@ def MFCC_Preprocess(audio):
             feature_vectors.append(future.result())
     feature_vectors = np.vstack(feature_vectors)
     # calculate the mean and standard deviation across the coefficients
-    mean = cp.mean(feature_vectors, axis=0)
-    std = cp.std(feature_vectors, axis=0)
+    mean = np.mean(feature_vectors, axis=0)
+    std = np.std(feature_vectors, axis=0)
     feature_vectors = (feature_vectors - mean) / std
-    return cp.asnumpy(feature_vectors)
+    return feature_vectors
 
-def feature_extraction_kernel(segment,window_samples,fs,n_mels,n_ceps):
+
+def feature_extraction_kernel(segment, window_samples, fs, n_mels, n_ceps):
     # Apply windowing function
-    window = cp.hanning(window_samples)
+    window = np.hanning(window_samples)
     windowed_segment = segment * window
 
     # Compute DFT of windowed segment
-    dft = cp.fft.rfft(windowed_segment)
+    dft = np.fft.rfft(windowed_segment)
 
     # Retain only the logarithmic of magnitude of the DFT
-    dft_magnitude = cp.log(cp.abs(dft))
-    dft_magnitude[cp.isnan(dft_magnitude)] = 0
-    dft_magnitude[cp.isinf(dft_magnitude)] = 0
+    dft_magnitude = np.log(np.abs(dft))
+    dft_magnitude[np.isnan(dft_magnitude)] = 0
+    dft_magnitude[np.isinf(dft_magnitude)] = 0
+
     # Smooth the spectrum to emphasize perceptually meaningful frequencies
-    fft_magnitude = cp.asarray(librosa.effects.harmonic(cp.asnumpy(dft_magnitude)))
-        
-    mel_filter = cp.asarray(librosa.filters.mel(sr=fs, n_fft=window_samples, n_mels=n_mels))
-        
-    mel_spectrum = cp.dot(mel_filter, fft_magnitude)
-    smoothed_spectrum = cp.log(mel_spectrum)
+    fft_magnitude = librosa.effects.harmonic(dft_magnitude)
+
+    mel_filter = librosa.filters.mel(sr=fs, n_fft=window_samples, n_mels=n_mels)
+    mel_spectrum = np.dot(mel_filter, fft_magnitude)
+    smoothed_spectrum = np.log(mel_spectrum)
 
     # Perform Karhunen-Loeve (KL) transform (approximated by DCT)
-    kl_transform = cp.asarray(scipy.fftpack.dct(cp.asnumpy(mel_spectrum), axis=0, norm='ortho'))
+    kl_transform = scipy.fftpack.dct(mel_spectrum, axis=0, norm='ortho')
 
     # Obtain cepstral features
-    cepstral_coefficients = cp.dot( cp.cos(cp.pi * cp.arange(n_mels) * cp.arange(n_ceps).reshape(-1, 1) / n_mels),kl_transform)
-    
+    cepstral_coefficients = np.dot(np.cos(np.pi * np.arange(n_mels) * np.arange(n_ceps).reshape(-1, 1) / n_mels), kl_transform)
+
     return cepstral_coefficients
 
 
-sys.path.append(r"C:\Users\Restandsleep\Downloads\Web-app-for-MFCC-based-Recurrent-Neural-Network-for-automatic-clinical-depression-recognition-main\server")
-audio = AudioSegment.from_file(r"uploads/300.wav")
+# sys.path.append(r"C:/Users/Ram G/Desktop/HCI2/server")
+audio = AudioSegment.from_file(args[1])
 proc = MFCC_Preprocess(audio)
 proc = tf.keras.preprocessing.sequence.pad_sequences(np.array([proc]), padding='pre')
 

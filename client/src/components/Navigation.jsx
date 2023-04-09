@@ -1,13 +1,13 @@
-import { HamburgerIcon, Icon } from '@chakra-ui/icons'
+import { HamburgerIcon, Icon, ArrowBackIcon } from '@chakra-ui/icons'
 import React from 'react'
 import {FaGithub} from "react-icons/fa";
 import {FaExternalLinkAlt} from "react-icons/fa"
-const Navigation = () => {
+const Navigation = (props) => {
   return (
     <nav className=' flex  w-full text border-b border-solid border-white/10 text-gray-500 font-bold font-Roboto'>
         <div className=' flex items-center  basis-1/3 px-12 py-8 gap-4 border-l border-white/10'>
         <a href='#'>
-        <HamburgerIcon color='red.500'/>
+        {props.page=="Home"?<HamburgerIcon color='red.500' />:<ArrowBackIcon color='red.500'/>}
         </a>
         </div>
         <div className='flex justify-center items-center  basis-1/3 px-12 py-8 gap-12 border-l border-white/10'>
