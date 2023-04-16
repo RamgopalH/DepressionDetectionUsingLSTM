@@ -8,12 +8,13 @@ The pre processing function and the model have been is slightly altered . The Da
 
 ## Required Software
 
-> Python (^3.10) [with PIP]
-> NPM (^9.50)
-> Node.js (^16.16.0)
-> React (^18.2)
+- Python (^3.10) [with PIP]
+- NPM (^9.50)
+- Node.js (^16.16.0)
+- React (^18.2)
+- Git
 
-## Running the Model on local system
+## Running the Model on Local Machine
 
 Clone the repository by downloading the zip file or running the *git clone* command like so:
 ```
