@@ -1,30 +1,23 @@
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-import os
 import sys
-import ast
 from pydub import effects
 import scipy
-from scipy.io import wavfile
-from scipy.fftpack import fft
 from pydub import AudioSegment
 from IPython.display import Audio
 import librosa
-import shutil
 from keras.layers import Input, LSTM, BatchNormalization, Dropout, Dense
 from keras.regularizers import l1
 import keras.optimizers
 from keras.models import Model
-from numba import cuda
 from concurrent.futures import ThreadPoolExecutor
-import tensorflow.keras.optimizers
 import tensorflow as tf
+import tensorflow.keras.optimizers
+from tensorflow.keras.models import model_from_json
 np.set_printoptions(threshold=sys.maxsize) 
 threshold = 0.5
-from tensorflow.keras.models import model_from_json
 
 args = sys.argv
-
 
 def MFCC_Preprocess(audio):
     normalized_audio = effects.normalize(audio)
@@ -34,7 +27,6 @@ def MFCC_Preprocess(audio):
     step_size = 0.5  # seconds
     window_samples = int(window_length * fs)
     step_samples = int(step_size * fs)
-    # print(len(data) , " ",len(data)/step_samples)
     # Define number of Mel-frequency bins
     n_mels = 24
 
@@ -60,7 +52,7 @@ def MFCC_Preprocess(audio):
         for future in futures:
             feature_vectors.append(future.result())
     feature_vectors = np.vstack(feature_vectors)
-    # calculate the mean and standard deviation across the coefficients
+    # Calculate the mean and standard deviation across the coefficients
     mean = np.mean(feature_vectors, axis=0)
     std = np.std(feature_vectors, axis=0)
     feature_vectors = (feature_vectors - mean) / std
@@ -95,8 +87,6 @@ def feature_extraction_kernel(segment, window_samples, fs, n_mels, n_ceps):
 
     return cepstral_coefficients
 
-
-# sys.path.append(r"C:/Users/Ram G/Desktop/HCI2/server")
 audio = AudioSegment.from_file(args[1])
 proc = MFCC_Preprocess(audio)
 proc = tf.keras.preprocessing.sequence.pad_sequences(np.array([proc]), padding='pre')
@@ -105,12 +95,11 @@ proc = tf.keras.preprocessing.sequence.pad_sequences(np.array([proc]), padding='
 json_file = open(r'./model.json', 'r')
 loaded_model_json = json_file.read()
 loaded_model = model_from_json(loaded_model_json)
-# load weights into new model
+# Load weights into new model
 loaded_model.load_weights(r"./mod.h5")
 optimizer = tensorflow.keras.optimizers.legacy.Adam(learning_rate=0.0015, decay=1e-6)
 loaded_model.compile(optimizer=optimizer, loss=['binary_crossentropy', 'sparse_categorical_crossentropy'],
               metrics=['accuracy'])
-# loaded_model.summary()
 score = loaded_model.predict(proc, verbose=0)
 depression = False
 level = 0
